@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lokasi Klinik Mata</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+
+    .status, .radius-control {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.95);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      z-index: 999;
+    }
+
+    .status {
+      top: 10px;
+    }
+
+    .radius-control {
+      top: 60px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .radius-control input,
+    .radius-control select {
+      padding: 4px 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="status" id="status">Mendeteksi lokasi Anda...</div>
+
+  <div class="radius-control">
+    Radius preset:
+    <select id="radiusSelect">
+      <option value="5000" selected>5 km</option>
+      <option value="7000">7 km</option>
+      <option value="10000">10 km</option>
+    </select>
+    / Bebas (km):
+    <input type="number" id="customRadiusInput" placeholder="contoh: 13" min="1" max="50" style="width:60px;">
+    <button id="applyBtn">Terapkan</button>
+  </div>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const defaultLat = -6.2088;
+    const defaultLon = 106.8456;
+    let userLat = null;
+    let userLon = null;
+    const statusBox = document.getElementById("status");
+    const radiusSelect = document.getElementById("radiusSelect");
+    const customRadiusInput = document.getElementById("customRadiusInput");
+    const applyBtn = document.getElementById("applyBtn");
+
+    const map = L.map('map').setView([defaultLat, defaultLon], 12);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const hospitalIcon = L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/2838/2838912.png',
+      iconSize: [28, 28],
+      iconAnchor: [14, 28],
+      popupAnchor: [0, -28]
+    });
+
+    const userIcon = L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/149/149060.png',
+      iconSize: [26, 26],
+      iconAnchor: [13, 26],
+    });
+
+    let markers = [];
+
+    function clearMarkers() {
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+    }
+
+    function showHospitals(lat, lon, radius) {
+      clearMarkers();
+      fetch(`/get_nearby_hospitals?lat=${lat}&lon=${lon}&radius=${radius}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.hospitals && data.hospitals.length > 0) {
+            data.hospitals.forEach(h => {
+              const marker = L.marker([h.latitude, h.longitude], { icon: hospitalIcon }).addTo(map)
+                .bindPopup(`<strong>${h.name}</strong><br>${h.address}`);
+              markers.push(marker);
+            });
+            statusBox.textContent = `Menampilkan beberapa klinik mata dalam radius ${radius / 1000} KM.`;
+          } else {
+            statusBox.textContent = `Tidak ada klinik mata ditemukan dalam radius ${radius / 1000} KM.`;
+          }
+        })
+        .catch(() => {
+          statusBox.textContent = "Gagal mengambil data rumah sakit.";
+        });
+    }
+
+    function getSelectedRadius() {
+      const customVal = customRadiusInput.value;
+      if (customVal && !isNaN(customVal)) {
+        const km = parseInt(customVal);
+        if (km >= 1 && km <= 50) {
+          return km * 1000; // km → meter
+        } else {
+          alert("Radius bebas hanya di antara 1–50 km.");
+          return null;
+        }
+      }
+      return parseInt(radiusSelect.value);
+    }
+
+    function triggerUpdateRadius() {
+      const radius = getSelectedRadius();
+      if (!radius) return;
+      if (userLat !== null && userLon !== null) {
+        showHospitals(userLat, userLon, radius);
+      }
+    }
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userLat = pos.coords.latitude;
+          userLon = pos.coords.longitude;
+          map.setView([userLat, userLon], 13);
+          L.marker([userLat, userLon], { icon: userIcon }).addTo(map).bindPopup("Lokasi Anda").openPopup();
+          triggerUpdateRadius();
+        },
+        () => {
+          statusBox.textContent = "Gagal deteksi lokasi, menampilkan Jakarta.";
+          userLat = defaultLat;
+          userLon = defaultLon;
+          triggerUpdateRadius();
+        }
+      );
+    } else {
+      statusBox.textContent = "Browser tidak mendukung Geolocation.";
+      userLat = defaultLat;
+      userLon = defaultLon;
+      triggerUpdateRadius();
+    }
+
+    applyBtn.addEventListener("click", () => {
+      triggerUpdateRadius();
+    });
+
+    radiusSelect.addEventListener("change", () => {
+      customRadiusInput.value = ""; // reset custom input jika pilih preset
+      triggerUpdateRadius();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EOY</title>
+  <link rel="icon" href="/static/images/favicon.ico" type="image/ico">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #f8f9fa;
+    }
+    .result-box {
+      margin-top: 20px;
+      padding: 20px;
+      border-radius: 12px;
+      background-color: #ffffff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    #spinner {
+      display: none;
+    }
+    #preview {
+  width: 100%;
+  max-width: 350px;
+  height: auto;
+  margin: 15px auto 0;
+  display: block;
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+}
+
+#preview:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+  .box-contoh-gambar {
+    width: 240px;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+  .box-contoh-gambar img {
+    height: 200px;
+    width: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+  }
+
+  </style>
+</head>
+<body>
+  <div class="container py-5">
+    <div class="text-center mb-4">
+    <img src="/static/images/logo-eyesonyou.png" alt="EyesOnYou Logo" width="100" class="mb-2">
+    <h1 class="fw-bold" style="font-size: 2rem;">EyesOnYou</h1>
+    <p class="text-muted">Sistem Deteksi Mata Katarak</p>
+    </div>
+
+
+<!-- Form Upload -->
+<div class="alert alert-info" role="alert">
+  ⚠️ Untuk hasil terbaik harap unggah gambar mata dengan jelas dan tidak buram. <strong>Disarankan resolusi minimal 224×224 piksel</strong> agar hasil deteksi lebih akurat.
+</div>
+
+
+<div class="d-flex justify-content-center gap-4 mt-3 flex-wrap">
+  <div class="text-center box-contoh-gambar">
+    <div class="alert alert-success p-2 fw-bold">✅ Contoh Gambar yang Disarankan</div>
+    <img src="/static/images/contoh-baik.jpg" alt="Contoh Baik">
+    <div class="small text-muted mt-2">Jelas, fokus, penuh, dan terang.</div>
+  </div>
+  <div class="text-center box-contoh-gambar">
+    <div class="alert alert-danger p-2 fw-bold">❌ Contoh Gambar yang Tidak Disarankan</div>
+    <img src="/static/images/contoh-buram.PNG" alt="Contoh Buram">
+    <div class="small text-muted mt-2">Buram, gelap, tidak fokus, atau terpotong.</div>
+  </div>
+</div>
+
+
+
+<form id="uploadForm">
+  <div class="mb-3">
+    <label for="image" class="form-label">Unggah Gambar Mata</label>
+    <input 
+      class="form-control" 
+      type="file" 
+      id="image" 
+      name="image" 
+      accept=".jpg,.jpeg,.png" 
+      required
+    >
+    <img id="preview" class="d-none mt-3 rounded" />
+  </div>
+  <button type="submit" class="btn btn-primary">Prediksi Sekarang</button>
+</form>
+
+  <!-- Spinner -->
+    <div id="spinner" class="text-center mt-3">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p>Memproses gambar, harap tunggu...</p>
+    </div>
+
+  <!-- Hasil Prediksi dipindah ke sini -->
+  <div id="result" class="result-box mt-4 d-none">
+    <h4>Hasil Prediksi:</h4>
+    <p id="prediction" class="fw-bold fs-4"></p>
+    <div id="extra-info" class="text-muted"></div>
+  </div>
+</form>
+
+<!-- Output Hasil -->
+<div id="predictionResult" class="mt-4 d-none">
+  <h5>Hasil Prediksi:</h5>
+  <p><strong id="labelOutput"></strong></p>
+  <p id="infoOutput"></p>
+</div>
+
+<!-- Form Gejala -->
+<form id="gejalaForm" class="mt-4 d-none">
+  <h5>Apakah Anda mengalami gejala berikut?</h5>
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" id="blurred" value="blurred">
+    <label class="form-check-label" for="blurred">Pandangan kabur</label>
+  </div>
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" id="glare" value="glare">
+    <label class="form-check-label" for="glare">Silau saat malam</label>
+  </div>
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" id="halos" value="halos">
+    <label class="form-check-label" for="halos">Melihat lingkaran cahaya</label>
+  </div>
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" id="over50" value="over50">
+    <label class="form-check-label" for="over50">Usia di atas 50 tahun</label>
+  </div>
+  <button type="submit" class="btn btn-warning mt-3">Lihat Diagnosa Akhir</button>
+</form>
+
+<!-- Hasil Diagnosa Gabungan -->
+<div id="finalDiagnosis" class="alert alert-info mt-3 d-none"></div>
+
+    <!-- Form Kirim Email -->
+    <div id="emailForm" class="mt-4 d-none">
+      <label for="emailInput" class="form-label">Masukkan Email Anda:</label>
+      <input type="email" id="emailInput" class="form-control mb-2" placeholder="emailanda@gmail.com" required>
+      <button class="btn btn-success" id="sendEmailBtn">Kirim Hasil ke Email Saya</button>
+    </div>
+
+    <!-- Notifikasi -->
+    <div id="emailAlert" class="alert alert-success mt-3 d-none" role="alert">
+      📬 Hasil berhasil dikirim ke email Anda!
+    </div>
+
+    <!-- Tombol Jadwal Dokter -->
+<a href="/jadwal" class="btn btn-outline-dark mt-2">
+  📅 Lihat Jadwal Dokter
+</a>
+
+<!-- Tombol Edukasi -->
+<a href="/edukasi" class="btn btn-info mt-2">
+  🔍 Lihat Edukasi Medis
+</a>
+
+
+
+    <!-- Statistik Katarak -->
+    <div class="mt-5">
+      <h4>📊 Statistik Katarak</h4>
+      <div class="row" id="statistikContainer">
+        <!-- Diisi oleh JS -->
+      </div>
+    </div>
+
+    <!-- Tombol dan Grafik -->
+    <div class="mt-4">
+    <div class="d-flex gap-2 my-3 flex-wrap">
+    <button class="btn btn-outline-primary" id="toggleChartBtn">
+      📊 Penyebab Kebutaan
+    </button>
+    <button class="btn btn-outline-success" id="toggleAgeChartBtn">
+      📈 Usia Penderita
+    </button>
+    <button class="btn btn-outline-secondary" id="toggleWorldChartBtn">
+      🌐 Distribusi Global
+    </button>
+    <button class="btn btn-outline-danger" id="closeChartBtn">
+      ❌ Tutup Grafik
+    </button>
+    </div>
+
+    <!-- Container semua grafik -->
+    <div id="chartContainer" class="d-none d-flex justify-content-center">
+      <canvas id="katarakChart" style="max-width: 100%; height: 250px;"></canvas>
+    </div>
+
+    <div id="ageChartContainer" class="d-none d-flex justify-content-center">
+      <canvas id="ageChart" style="max-width: 100%; height: 250px;"></canvas>
+    </div>
+
+    <div id="worldChartContainer" class="d-none d-flex justify-content-center">
+      <canvas id="worldChart" style="max-width: 100%; height: 250px;"></canvas>
+    </div>
+    </div>
+
+    <!-- Peta -->
+    <div class="mt-5">
+      <h4>Lokasi Klinik Mata Terdekat</h4>
+      <iframe src="/map" width="100%" height="400" style="border:none;"></iframe>
+    </div>
+  </div>
+
+<script>
+const form = document.getElementById("uploadForm");
+const resultBox = document.getElementById("result");
+const predictionText = document.getElementById("prediction");
+const extraInfo = document.getElementById("extra-info");
+const spinner = document.getElementById("spinner");
+const preview = document.getElementById("preview");
+const imageInput = document.getElementById("image");
+
+let hasilAkhirFinal = ""; // akan digunakan untuk email
+
+// Preview + validasi resolusi
+imageInput.addEventListener("change", function () {
+  const file = this.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    const img = new Image();
+    img.onload = function () {
+      if (img.width < 224 || img.height < 224) {
+        alert("❌ Gambar minimal harus beresolusi 224x224 piksel.");
+        imageInput.value = "";
+        preview.classList.add("d-none");
+        preview.src = "";
+        return;
+      }
+      preview.src = e.target.result;
+      preview.classList.remove("d-none");
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+// Submit gambar ke model
+form.addEventListener("submit", async function (e) {
+  e.preventDefault();
+  spinner.style.display = "block";
+  resultBox.classList.add("d-none");
+
+  const formData = new FormData();
+  formData.append("file", imageInput.files[0]);
+
+  const res = await fetch("/predict", {
+    method: "POST",
+    body: formData
+  });
+
+  const result = await res.json();
+  spinner.style.display = "none";
+  resultBox.classList.remove("d-none");
+
+  const label = result.label || "tidak diketahui";
+  predictionText.textContent = label.toUpperCase();
+  predictionText.classList.remove("text-danger", "text-success", "text-warning");
+
+  if (label === "cataract") predictionText.classList.add("text-danger");
+  else if (label === "normal") predictionText.classList.add("text-success");
+  else predictionText.classList.add("text-warning");
+
+  extraInfo.textContent = result.info || '';
+  document.getElementById("gejalaForm").classList.remove("d-none");
+});
+
+// Submit gejala
+const gejalaForm = document.getElementById("gejalaForm");
+const finalDiagnosis = document.getElementById("finalDiagnosis");
+
+gejalaForm.addEventListener("submit", async function (e) {
+  e.preventDefault();
+
+  const selected = [];
+  ["blurred", "glare", "halos", "over50"].forEach(id => {
+    if (document.getElementById(id).checked) selected.push(id);
+  });
+
+  const response = await fetch("/api/analisa-gejala", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      label: predictionText.textContent.toLowerCase(),
+      gejala: selected
+    })
+  });
+
+  const data = await response.json();
+  hasilAkhirFinal = data.hasil_akhir;
+
+  finalDiagnosis.textContent = `🧠 Diagnosa Akhir: ${hasilAkhirFinal}`;
+  finalDiagnosis.classList.remove("d-none");
+  document.getElementById("emailForm").classList.remove("d-none");
+});
+</script>
+
+  <script>
+  // Ambil data statistik katarak
+  fetch('/api/statistik_katarak')
+    .then(res => res.json())
+    .then(data => {
+      const container = document.getElementById("statistikContainer");
+
+      // Data Indonesia
+      const indoCard = `
+        <div class="col-md-6 mb-3">
+          <div class="card border-primary">
+            <div class="card-body">
+              <h5 class="card-title">🇮🇩 Indonesia</h5>
+              <p class="card-text">Jumlah Penderita: <strong>${data.indonesia.penderita}</strong></p>
+              <p class="card-text">Usia Rentan: <strong>${data.indonesia.usia_rentan}</strong></p>
+              <p class="card-text">Posisi Regional: <strong>${data.indonesia.urutan_global}</strong></p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Data Global
+      const globalCard = `
+        <div class="col-md-6 mb-3">
+          <div class="card border-success">
+            <div class="card-body">
+              <h5 class="card-title">🌍 Dunia</h5>
+              <p class="card-text">Jumlah Penderita: <strong>${data.global.penderita}</strong></p>
+              <p class="card-text">Penyebab Utama: <strong>${data.global.penyebab}</strong></p>
+              <p class="card-text"><em>Sumber: ${data.global.data_sumber}</em></p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = indoCard + globalCard;
+    })
+    .catch(() => {
+      document.getElementById("statistikContainer").innerHTML = `
+        <div class="alert alert-warning">Gagal mengambil data statistik.</div>
+      `;
+    });
+    
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Tombol
+  const chartBtn = document.getElementById('toggleChartBtn');
+  const ageBtn = document.getElementById('toggleAgeChartBtn');
+  const worldBtn = document.getElementById('toggleWorldChartBtn');
+
+  // Container grafik
+  const chartContainer = document.getElementById('chartContainer');
+  const ageChartContainer = document.getElementById('ageChartContainer');
+  const worldChartContainer = document.getElementById('worldChartContainer');
+
+  // Tombol tutup grafik
+  const closeBtn = document.getElementById("closeChartBtn");
+
+  closeBtn.addEventListener("click", () => {
+    chartContainer.classList.add("d-none");
+    ageChartContainer.classList.add("d-none");
+    worldChartContainer.classList.add("d-none");
+  });
+
+  // Grafik Chart.js
+  let chartInstance = null;
+  let ageChartInstance = null;
+  let worldChartInstance = null;
+
+  // Utility tampilkan hanya satu grafik
+  function showOnly(containerToShow) {
+    [chartContainer, ageChartContainer, worldChartContainer].forEach(div => {
+      div.classList.add("d-none");
+    });
+    containerToShow.classList.remove("d-none");
+  }
+
+  chartBtn.addEventListener("click", () => {
+    showOnly(chartContainer);
+    if (!chartInstance) {
+      const ctx = document.getElementById('katarakChart').getContext('2d');
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Katarak', 'Glaukoma', 'Degenerasi Makula', 'Refraksi Tidak Terkoreksi', 'Penyebab Lain'],
+          datasets: [{
+            label: '% Penyebab Kebutaan Global',
+            data: [51, 8, 5, 20, 16],
+            backgroundColor: ['#A1C298', '#FFD56F', '#FF9B82', '#CE5A67', '#abd7eb'],
+            borderRadius: 6
+          }]
+        },
+        options: { responsive: true }
+      });
+    }
+  });
+
+  ageBtn.addEventListener("click", () => {
+    showOnly(ageChartContainer);
+    if (!ageChartInstance) {
+      const ctx = document.getElementById('ageChart').getContext('2d');
+      ageChartInstance = new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: ['0–19', '20–39', '40–59', '60+'],
+    datasets: [{
+      label: 'Distribusi Usia Penderita Katarak (%)',
+      data: [2, 5, 27, 66],
+      backgroundColor: ['#A1C298', '#FFD56F', '#FF9B82', '#CE5A67'],
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      y: {
+        beginAtZero: true,
+        max: 70,
+        ticks: { callback: v => v + '%' }
+      }
+    }
+  }
+});
+
+    }
+  });
+
+  worldBtn.addEventListener("click", () => {
+    showOnly(worldChartContainer);
+    if (!worldChartInstance) {
+      const ctx = document.getElementById('worldChart').getContext('2d');
+      worldChartInstance = new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: ['India', 'Indonesia', 'Nigeria', 'Brazil', 'Cina'],
+    datasets: [{
+      label: 'Jumlah Penderita Katarak (juta)',
+      data: [25, 8, 6, 5, 10],
+      backgroundColor: ['#A1C298', '#FFD56F', '#FF9B82', '#CE5A67', '#abd7eb'],
+      borderRadius: 6
+    }]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: 'Juta Orang' }
+      }
+    }
+  }
+});
+
+    }
+  });
+
+  // Kirim email
+const emailForm = document.getElementById("emailForm");
+const emailInput = document.getElementById("emailInput");
+const sendEmailBtn = document.getElementById("sendEmailBtn");
+const emailAlert = document.getElementById("emailAlert");
+
+sendEmailBtn.onclick = async () => {
+  const email = emailInput.value.trim();
+  if (!email || !email.includes("@")) {
+    alert("Masukkan email yang valid!");
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/kirim-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: email,
+        label: predictionText.textContent.toLowerCase(),
+        info: extraInfo.textContent,
+        hasil_akhir: hasilAkhirFinal
+      })
+    });
+
+    const result = await res.json();
+    if (res.ok) {
+      emailAlert.classList.remove("d-none");
+      emailInput.disabled = true;
+      sendEmailBtn.disabled = true;
+    } else {
+      alert("Gagal mengirim email: " + result.detail);
+    }
+  } catch (err) {
+    alert("Terjadi kesalahan saat mengirim.");
+  }
+};
+
+// Validasi format file
+document.getElementById("image").addEventListener("change", function () {
+  const file = this.files[0];
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+  if (file && !allowedTypes.includes(file.type)) {
+    alert('❌ Hanya file .jpg, .jpeg, atau .png yang diperbolehkan!');
+    this.value = '';
+  }
+});
+</script>
+
+<script>
+  document.getElementById('image').addEventListener('change', function () {
+    const file = this.files[0];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+
+    if (file && !allowedTypes.includes(file.type)) {
+      alert('❌ Hanya file .jpg, .jpeg, atau .png yang diperbolehkan!');
+      this.value = '';
+    }
+  });
+</script>
+</body>
+</html>

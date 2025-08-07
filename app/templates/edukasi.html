@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edukasi Medis</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="icon" href="/static/images/favicon.ico" type="image/ico">
+</head>
+<body>
+  <div class="container py-5">
+    <h2 class="text-center mb-4">📚 Edukasi Medis: Informasi dari Wikipedia</h2>
+
+<!-- Form Pencarian -->
+<form id="searchForm" class="mb-4">
+  <div class="row g-2">
+    <!-- Dropdown -->
+    <div class="col-md-6">
+      <select id="topicSelect" class="form-select">
+        <option value="" selected disabled>Pilih topik edukasi</option>
+        <option value="katarak">Katarak</option>
+        <option value="retina">Retina</option>
+        <option value="lensa mata">Lensa Mata</option>
+        <option value="glaukoma">Glaukoma</option>
+        <option value="penyakit mata">Penyakit Mata</option>
+        <option value="degenerasi makula">Degenerasi Makula</option>
+        <option value="kebutaan">Kebutaan</option>
+      </select>
+    </div>
+    <!-- Input manual -->
+    <div class="col-md-6">
+      <input type="text" id="topicInput" class="form-control" placeholder="Atau ketik topik sendiri">
+    </div>
+    <div class="col-12">
+      <button class="btn btn-primary w-100" type="submit">🔍 Cari</button>
+    </div>
+  </div>
+</form>
+
+
+
+    <!-- Hasil Edukasi -->
+    <div id="result" class="card d-none">
+      <div class="card-body">
+        <h4 id="result-title"></h4>
+        <p id="result-extract" class="text-muted"></p>
+        <a id="result-url" href="#" target="_blank">Baca selengkapnya di Wikipedia</a>
+      </div>
+    </div>
+
+    <!-- Pesan Error -->
+    <div id="error-message" class="alert alert-danger d-none mt-3"></div>
+
+    <!-- Tombol Kembali -->
+    <div class="mt-5">
+      <a href="/" class="btn btn-secondary">⬅️ Kembali ke Halaman Utama</a>
+    </div>
+  </div>
+
+  <script>
+  const form = document.getElementById('searchForm');
+  const topicSelect = document.getElementById('topicSelect');
+  const topicInput = document.getElementById('topicInput');
+  const resultCard = document.getElementById('result');
+  const errorMessage = document.getElementById('error-message');
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const manualInput = topicInput.value.trim();
+    const selected = topicSelect.value;
+    const topic = manualInput !== "" ? manualInput : selected;
+
+    if (!topic) {
+      errorMessage.textContent = "Silakan pilih atau ketik topik.";
+      errorMessage.classList.remove("d-none");
+      return;
+    }
+
+    resultCard.classList.add("d-none");
+    errorMessage.classList.add("d-none");
+
+    try {
+      const res = await fetch(`/edukasi/${encodeURIComponent(topic)}`);
+      const data = await res.json();
+
+      if (data.error) {
+        errorMessage.textContent = "Topik tidak ditemukan.";
+        errorMessage.classList.remove("d-none");
+        return;
+      }
+
+      document.getElementById('result-title').textContent = data.title;
+      document.getElementById('result-extract').textContent = data.extract;
+      document.getElementById('result-url').href = data.url;
+
+      resultCard.classList.remove("d-none");
+    } catch (err) {
+      errorMessage.textContent = "Gagal mengambil data.";
+      errorMessage.classList.remove("d-none");
+    }
+  });
+</script>
+
+
+</body>
+</html>

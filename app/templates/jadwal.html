@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jadwal Dokter</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <style>
+    .highlight {
+      background-color: #fefcbf;
+      font-weight: bold;
+    }
+    .rs-button {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body class="bg-light">
+<div class="container py-4">
+  <h2 class="mb-4"><i class="bi bi-stethoscope"></i> Jadwal Dokter</h2>
+
+<div class="rs-button">
+  <button class="btn btn-outline-primary me-2" onclick="showTable('rsdk')">RS Dadi Keluarga Purwokerto</button>
+  <button class="btn btn-outline-success" onclick="showTable('rsud')">RSUD Sukoharjo</button>
+  <button class="btn btn-outline-secondary" disabled>RSUD Depok (belum tersedia)</button>
+  <button class="btn btn-outline-secondary" disabled>RS Mitra Keluarga (belum tersedia)</button>
+</div>
+
+
+
+  {% if data_rsdk %}
+  <div id="rsdk-table" class="table-responsive">
+    <h4>RS Dadi Keluarga</h4>
+    <table class="table table-bordered table-hover">
+      <thead class="table-dark text-center">
+        <tr>
+          <th>Poliklinik</th>
+          <th>Dokter</th>
+          <th>Senin</th>
+          <th>Selasa</th>
+          <th>Rabu</th>
+          <th>Kamis</th>
+          <th>Jumat</th>
+          <th>Sabtu</th>
+          <th>Minggu</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in data_rsdk %}
+        <tr class="{% if row['Poliklinik']|lower == 'klinik mata' %}highlight{% endif %}">
+          <td>{{ row['Poliklinik'] }}</td>
+          <td>{{ row['Dokter'] }}</td>
+          <td>{{ row['Senin'] }}</td>
+          <td>{{ row['Selasa'] }}</td>
+          <td>{{ row['Rabu'] }}</td>
+          <td>{{ row['Kamis'] }}</td>
+          <td>{{ row['Jumat'] }}</td>
+          <td>{{ row['Sabtu'] }}</td>
+          <td>{{ row['Minggu'] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="alert alert-warning">Tidak ada data jadwal dokter yang tersedia.</div>
+  {% endif %}
+
+
+
+{% if data_rsud %}
+  <div id="rsud-table" class="table-responsive">
+    <h4>RSUD Sukoharjo</h4>
+    <table class="table table-bordered table-hover">
+      <thead class="table-dark text-center">
+        <tr>
+          <th>Poliklinik</th>
+          <th>Dokter</th>
+          <th>Senin</th>
+          <th>Selasa</th>
+          <th>Rabu</th>
+          <th>Kamis</th>
+          <th>Jumat</th>
+          <th>Sabtu</th>
+          <th>Minggu</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in data_rsud %}
+        <tr class="{% if row['Poliklinik']|lower == 'klinik mata' %}highlight{% endif %}">
+          <td>{{ row['Poliklinik'] }}</td>
+          <td>{{ row['Dokter'] }}</td>
+          <td>{{ row['Senin'] }}</td>
+          <td>{{ row['Selasa'] }}</td>
+          <td>{{ row['Rabu'] }}</td>
+          <td>{{ row['Kamis'] }}</td>
+          <td>{{ row['Jumat'] }}</td>
+          <td>{{ row['Sabtu'] }}</td>
+          <td>{{ row['Minggu'] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="alert alert-warning">Tidak ada data jadwal dokter dari RSUD Sukoharjo yang tersedia.</div>
+{% endif %}
+
+
+
+
+
+
+
+
+
+  <a href="/" class="btn btn-secondary mt-4">⬅ Kembali ke Beranda</a>
+</div>
+
+<script>
+  function showTable(id) {
+    document.getElementById('rsdk-table').style.display = id === 'rsdk' ? 'block' : 'none';
+    document.getElementById('rsud-table').style.display = id === 'rsud' ? 'block' : 'none';
+  }
+  document.getElementById('rsdk-table').style.display = 'none';
+  document.getElementById('rsud-table').style.display = 'none';
+</script>
+
+
+</body>
+</html>
